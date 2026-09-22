@@ -5,9 +5,10 @@ import path from "path";
 export interface ProgressData {
   done: Record<number, boolean>;
   notes: Record<number, string>;
+  sheetDone: Record<string, boolean>;
 }
 
-const EMPTY: ProgressData = { done: {}, notes: {} };
+const EMPTY: ProgressData = { done: {}, notes: {}, sheetDone: {} };
 const REDIS_KEY = "productivity-tracker:progress";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -24,7 +25,7 @@ async function readProgressFile(): Promise<ProgressData> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf-8");
     const parsed = JSON.parse(raw);
-    return { done: parsed.done ?? {}, notes: parsed.notes ?? {} };
+    return { done: parsed.done ?? {}, notes: parsed.notes ?? {}, sheetDone: parsed.sheetDone ?? {} };
   } catch {
     return { ...EMPTY };
   }
@@ -39,7 +40,8 @@ export async function readProgress(): Promise<ProgressData> {
   const redis = getRedis();
   if (redis) {
     const data = await redis.get<ProgressData>(REDIS_KEY);
-    return data ?? { ...EMPTY };
+    if (!data) return { ...EMPTY };
+    return { done: data.done ?? {}, notes: data.notes ?? {}, sheetDone: data.sheetDone ?? {} };
   }
   return readProgressFile();
 }
